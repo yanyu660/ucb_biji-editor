@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "name": "知识库名称",
+  "createdAt": "2026-06-17T12:00:00.000Z",
+  "updatedAt": "2026-06-17T12:00:00.000Z",
+  "notes": [
+    {
+      "id": "note-id-001",
+      "title": "示例笔记",
+      "slug": "example-note",
+      "createdAt": "2026-06-17T12:00:00.000Z",
+      "updatedAt": "2026-06-17T12:00:00.000Z",
+      "assets": [
+        "image-demo.png",
+        "video-demo.mp4"
+      ]
+    }
+  ]
+}
