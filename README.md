@@ -17,7 +17,7 @@ Biji（笔迹）是一个基于 **UCB 开放格式** 的跨平台知识库编辑
 
 ### Windows
 
-从 [Releases](https://github.com/你的用户名/biji-editor/releases) 下载最新版本：
+从 [Releases](https://github.com/yanyu660/ucb_biji-editor/releases) 下载最新版本：
 
 - `Biji Setup 0.1.2.exe` — 安装版
 - `Biji 0.1.2.exe` — 便携版（双击即用）
@@ -48,7 +48,7 @@ XXX.ucb
  └── .cache/              阅读器临时数据（可选）
 ```
 
-详见 [UCB 标准文档](https://github.com/你的用户名/biji-editor/tree/main/UCB%20v1.0%20%E6%A0%87%E5%87%86)。
+详见 [UCB 标准文档](https://github.com/yanyu660/ucb_biji-editor/tree/main/UCB%20v1.0%20%E6%A0%87%E5%87%86)。
 
 ## 🛠 本地开发
 
