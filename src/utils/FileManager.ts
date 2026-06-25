@@ -1,8 +1,8 @@
 import AdmZip from 'adm-zip'
 import * as path from 'path'
 import * as fs from 'fs'
-import type { UcbManifest, UcbManifestNote, NoteContent } from '@/types/ucb'
-import { UCB_VERSION, createManifest, createManifestNote } from '@/types/ucb'
+import type { UcbManifest, UcbManifestNote, NoteContent } from '../types/ucb'
+import { UCB_VERSION, createManifest, createManifestNote } from '../types/ucb'
 
 /**
  * UCB 标准 v1.0 文件管理

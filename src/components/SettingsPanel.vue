@@ -16,10 +16,6 @@ function setBoth(theme: string) {
   emit('update:editorTheme', theme)
   emit('update:previewTheme', theme)
 }
-
-async function onToggleDebug(enabled: boolean) {
-  emit('update:debugMode', enabled)
-}
 </script>
 
 <template>
@@ -88,7 +84,7 @@ async function onToggleDebug(enabled: boolean) {
             <input
               type="checkbox"
               :checked="debugMode"
-              @change="onToggleDebug(($event.target as HTMLInputElement).checked)"
+              @change="emit('update:debugMode', ($event.target as HTMLInputElement).checked)"
             />
             <span class="toggle-track">
               <span class="toggle-thumb"></span>

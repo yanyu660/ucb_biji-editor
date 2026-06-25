@@ -7,8 +7,6 @@ import type { NoteContent } from '../src/types/ucb'
 
 let mainWindow: BrowserWindow | null = null
 let tempMediaDir = ''
-let debuggerAttached = false
-let debugLogStream: fs.WriteStream | null = null
 const manager = new NoteFileManager()
 
 function genId(): string {
@@ -44,65 +42,7 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 
-  // 调试模式开关（IPC 控制）：打开/关闭 DevTools + CDP Console 日志
-  ipcMain.handle('window:toggleDevTools', (_event, enabled: boolean) => {
-    const wc = mainWindow!.webContents
-    if (enabled) {
-      wc.openDevTools()
-
-      if (!debuggerAttached) {
-        try {
-          const dp = wc.debugger
-          dp.attach('1.3')
-          dp.sendCommand('Console.enable')
-
-          // 生成日志路径
-          const dbgDir = path.join(process.cwd(), '.dbg')
-          if (!fs.existsSync(dbgDir)) fs.mkdirSync(dbgDir, { recursive: true })
-          const logFile = path.join(dbgDir, `console-${Date.now()}.log`)
-          debugLogStream = fs.createWriteStream(logFile, { flags: 'a' })
-
-          debugLogStream.write(`=== Debug Console Log ${new Date().toISOString()} ===\n\n`)
-
-          dp.on('message', (_event2, method, params: any) => {
-            if (method === 'Console.messageAdded') {
-              const msg = params.message
-              const level = msg.level.toUpperCase().padEnd(7)
-              const text = msg.text || ''
-              const url = msg.url || ''
-              const line = msg.line || ''
-              const stack = msg.stackTrace?.callFrames?.map((f: any) =>
-                `    at ${f.functionName || '(anonymous)'} (${f.url}:${f.lineNumber}:${f.columnNumber})`
-              ).join('\n') || ''
-              const entry = `[${level}] ${text}\n  ${url}:${line}${stack ? '\n' + stack : ''}\n`
-              debugLogStream!.write(entry)
-            }
-          })
-
-          dp.on('detach', () => {
-            debuggerAttached = false
-            if (debugLogStream) { debugLogStream.end(); debugLogStream = null }
-          })
-
-          debuggerAttached = true
-        } catch (err: any) {
-          console.error('[Debugger] attach failed:', err.message)
-        }
-      }
-    } else {
-      wc.closeDevTools()
-      if (debugLogStream) { debugLogStream.end(); debugLogStream = null }
-      if (debuggerAttached) {
-        try { wc.debugger.detach() } catch {}
-        debuggerAttached = false
-      }
-    }
-    return wc.isDevToolsOpened()
-  })
-
-  ipcMain.handle('window:getDevToolsState', () => {
-    return mainWindow?.webContents.isDevToolsOpened() ?? false
-  })
+  // DevTools 在 createWindow 中不再注册 IPC
 }
 
 // ---- 自定义协议 media:// ----
@@ -443,6 +383,34 @@ ipcMain.handle('media:select', async (_, mediaType?: string) => {
 
   return { mediaUrl: `media://${newName}`, fileName: path.basename(sourcePath) }
 })
+
+// ---- IPC: DevTools 调试模式 ----
+ipcMain.handle('window:toggleDevTools', async (_event, enabled: boolean) => {
+  const wc = mainWindow!.webContents
+  if (enabled) {
+    await wc.openDevTools()
+    return true
+  } else {
+    wc.closeDevTools()
+    return false
+  }
+})
+
+ipcMain.handle('window:getDevToolsState', () => {
+  return mainWindow?.webContents.isDevToolsOpened() ?? false
+})
+
+// ---- 注册特权协议（必须在 app ready 之前完成）----
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'media',
+    privileges: {
+      stream: true,          // 支持流式响应（视频/音频分段加载必需）
+      supportFetchAPI: true, // 支持 fetch 请求
+      corsEnabled: false,    // 本地文件无需 CORS
+    },
+  },
+])
 
 // ---- App 生命周期 ----
 app.whenReady().then(() => {

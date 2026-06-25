@@ -5,23 +5,15 @@ import renderer from 'vite-plugin-electron-renderer'
 import path from 'path'
 
 export default defineConfig({
-  base: '/',
+  base: './',
   plugins: [
     vue(),
     electron([
       {
         entry: 'electron/main.ts',
         vite: {
-          resolve: {
-            alias: {
-              '@': path.resolve(__dirname, 'src'),
-            },
-          },
           build: {
             outDir: 'dist-electron',
-            rollupOptions: {
-              external: ['adm-zip'],
-            },
           },
         },
       },

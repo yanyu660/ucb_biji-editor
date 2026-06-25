@@ -2,7 +2,7 @@
 import { inject, ref, computed, type Ref, reactive } from 'vue'
 import type { Block, InlineSegment } from '@/types/blocks'
 import { parseMarkTags } from '@/types/blocks'
-import { resolveMediaUrl } from '@/platform/mediaResolver'
+import { resolveMediaUrl } from '@/platform'
 
 defineOptions({ name: 'BlockPreviewNode' })
 

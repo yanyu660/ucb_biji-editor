@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, onBeforeUnmount, provide } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, provide, nextTick } from 'vue'
 import SourceEditor from './SourceEditor.vue'
 import BlockPreview from './BlockPreview.vue'
 import SettingsPanel from './SettingsPanel.vue'
-import type { NoteContent } from '@/types/note'
+import type { NoteContent } from '@/types/ucb'
 import type { Block } from '@/types/blocks'
 import { createBlock, migrateBlock } from '@/types/blocks'
 import { createSampleNote } from '@/utils/sampleNote'
@@ -189,9 +189,17 @@ function handleKeydown(e: KeyboardEvent) {
 
 // ---- DevTools 初始化 ----
 async function onToggleDebug(enabled: boolean) {
+  // 先给即时视觉反馈，等动画渲染完再调 IPC
   debugMode.value = enabled
+  if (enabled) {
+    await nextTick()
+    await new Promise(r => requestAnimationFrame(r))
+  }
   try {
-    await platform.toggleDevTools(enabled)
+    const result = await platform.toggleDevTools(enabled)
+    if (!result) {
+      debugMode.value = false
+    }
   } catch {
     debugMode.value = !enabled
   }
