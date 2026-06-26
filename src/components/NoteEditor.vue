@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, onBeforeUnmount, provide, nextTick } from 'vue'
-import SourceEditor from './SourceEditor.vue'
+import { ref, reactive, onMounted, onBeforeUnmount, provide, nextTick, defineAsyncComponent } from 'vue'
 import BlockPreview from './BlockPreview.vue'
-import SettingsPanel from './SettingsPanel.vue'
 import type { NoteContent } from '@/types/ucb'
 import type { Block } from '@/types/blocks'
 import { createBlock, migrateBlock } from '@/types/blocks'
 import { createSampleNote } from '@/utils/sampleNote'
 import { platform } from '@/platform'
+
+const SourceEditor = defineAsyncComponent(() => import('./SourceEditor.vue'))
+const SettingsPanel = defineAsyncComponent(() => import('./SettingsPanel.vue'))
 
 // ---- 主题 ----
 const editorTheme = ref('light')

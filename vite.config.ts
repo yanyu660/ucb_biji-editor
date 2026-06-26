@@ -14,6 +14,13 @@ export default defineConfig({
         vite: {
           build: {
             outDir: 'dist-electron',
+            rollupOptions: {
+              output: {
+                manualChunks: {
+                  'vendor-zip': ['adm-zip', 'jszip'],
+                },
+              },
+            },
           },
         },
       },
@@ -34,6 +41,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-vue': ['vue'],
+        },
+      },
     },
   },
 })

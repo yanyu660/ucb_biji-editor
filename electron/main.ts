@@ -1,13 +1,21 @@
 import { app, BrowserWindow, ipcMain, dialog, protocol, Menu } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
-import AdmZip from 'adm-zip'
-import { NoteFileManager } from '../src/utils/FileManager'
 import type { NoteContent } from '../src/types/ucb'
+import { UCB_VERSION } from '../src/types/ucb'
 
 let mainWindow: BrowserWindow | null = null
 let tempMediaDir = ''
-const manager = new NoteFileManager()
+
+// 延迟初始化 NoteFileManager（依赖 adm-zip，避免启动时同步加载）
+let _manager: any = null
+async function getManager() {
+  if (!_manager) {
+    const { NoteFileManager } = await import('../src/utils/FileManager')
+    _manager = new NoteFileManager()
+  }
+  return _manager
+}
 
 function genId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
@@ -41,8 +49,6 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
-
-  // DevTools 在 createWindow 中不再注册 IPC
 }
 
 // ---- 自定义协议 media:// ----
@@ -140,7 +146,6 @@ function initTempMediaDir() {
   if (!fs.existsSync(tempMediaDir)) {
     fs.mkdirSync(tempMediaDir, { recursive: true })
   }
-  cleanupTempMedia()
 }
 
 function cleanupTempMedia() {
@@ -166,12 +171,14 @@ ipcMain.handle('note:open', async () => {
   cleanupTempMedia()
 
   try {
-    const manifest = manager.readManifest(filePath)
+    const mgr = await getManager()
+    const manifest = mgr.readManifest(filePath)
 
     // 如果有笔记，读取第一条
     if (manifest.notes.length === 0) {
       // 兼容旧保存 bug：manifest.notes 为空时，扫描 notes/ 目录
       try {
+        const AdmZip = (await import('adm-zip')).default
         const zip = new AdmZip(filePath)
         const noteDirs = new Set<string>()
         for (const entry of zip.getEntries()) {
@@ -180,8 +187,8 @@ ipcMain.handle('note:open', async () => {
         }
         if (noteDirs.size > 0) {
           const fallbackSlug = [...noteDirs][0]
-          const content = manager.readNoteContent(filePath, fallbackSlug)
-          const assets = manager.extractNoteAssets(filePath, fallbackSlug)
+          const content = mgr.readNoteContent(filePath, fallbackSlug)
+          const assets = mgr.extractNoteAssets(filePath, fallbackSlug)
           const assetFileNames: string[] = []
           for (const [name, buffer] of assets) {
             const dest = path.join(tempMediaDir, name)
@@ -203,10 +210,10 @@ ipcMain.handle('note:open', async () => {
     }
 
     const firstNote = manifest.notes[0]
-    const content = manager.readNoteContent(filePath, firstNote.slug)
+    const content = mgr.readNoteContent(filePath, firstNote.slug)
 
     // 将 assets 解压到临时目录
-    const assets = manager.extractNoteAssets(filePath, firstNote.slug)
+    const assets = mgr.extractNoteAssets(filePath, firstNote.slug)
     const assetFileNames: string[] = []
     for (const [name, buffer] of assets) {
       const dest = path.join(tempMediaDir, name)
@@ -244,11 +251,12 @@ ipcMain.handle('note:save', async (
   }
 
   try {
+    const mgr = await getManager()
     const slug = previousSlug || slugify(noteContent.title)
 
     // 如果文件已存在，用 updateNoteInPackage 更新
     if (fs.existsSync(result.filePath)) {
-      await manager.updateNoteInPackage(
+      await mgr.updateNoteInPackage(
         result.filePath,
         noteContent,
         slug,
@@ -258,7 +266,7 @@ ipcMain.handle('note:save', async (
     } else {
       // 新文件，创建完整的包
       const manifest = {
-        version: NoteFileManager.MANIFEST_VERSION,
+        version: UCB_VERSION,
         name: noteContent.title || '未命名知识库',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -280,7 +288,7 @@ ipcMain.handle('note:save', async (
       const assetsMap = new Map<string, string[]>()
       assetsMap.set(slug, assetPaths)
 
-      await manager.writePackage(result.filePath, manifest, notesMap, assetsMap)
+      await mgr.writePackage(result.filePath, manifest, notesMap, assetsMap)
     }
 
     return { success: true, filePath: result.filePath, slug }
@@ -305,10 +313,11 @@ ipcMain.handle('note:saveAs', async (
   }
 
   try {
+    const mgr = await getManager()
     const slug = slugify(noteContent.title)
 
     const manifest = {
-      version: NoteFileManager.MANIFEST_VERSION,
+      version: UCB_VERSION,
       name: noteContent.title || '未命名知识库',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -320,7 +329,7 @@ ipcMain.handle('note:saveAs', async (
     const assetsMap = new Map<string, string[]>()
     assetsMap.set(slug, assetPaths)
 
-    await manager.writePackage(result.filePath, manifest, notesMap, assetsMap)
+    await mgr.writePackage(result.filePath, manifest, notesMap, assetsMap)
 
     return { success: true, filePath: result.filePath, slug }
   } catch (err: any) {
@@ -418,6 +427,9 @@ app.whenReady().then(() => {
   registerMediaProtocol()
   initTempMediaDir()
   createWindow()
+
+  // 窗口显示后再清理临时媒体，不阻塞启动
+  setTimeout(() => cleanupTempMedia(), 2000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

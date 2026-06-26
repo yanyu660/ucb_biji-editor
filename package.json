@@ -1,6 +1,6 @@
 {
   "name": "biji-editor",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Biji 笔记 - 知识库编辑器 (.ucb)",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -22,7 +22,7 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "zip",
           "arch": [
             "x64"
           ]
